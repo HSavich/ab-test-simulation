@@ -1,11 +1,4 @@
-// ExperimentChart.jsx
-import React, {
-  forwardRef,
-  useImperativeHandle,
-  useRef,
-  useState,
-  useEffect,
-} from "react";
+import React, { useRef, useState, useEffect } from "react";
 import { Line } from "react-chartjs-2";
 import {
   Chart as ChartJS,
@@ -27,61 +20,74 @@ ChartJS.register(
   Legend,
 );
 
-// --- Simulation params
-const HOURS = 24 * 7; // 168 hours (1 week)
-const USERS_PER_HOUR = 50; // total across both arms
+const HOURS = 24 * 7;
+const USERS_PER_HOUR = 500;
 const CONTROL_P = 0.5;
-const TREAT_P = 0.525; // 5% lift over control
-const TICK_MS = 250; // 4 hours per second (1 hour / 250ms)
-const EPS = 1e-300;
+const TREAT_P = 0.525;
+const TICK_MS = 250;
 
-// Welch’s t-test p-value comparing two Bernoulli means (proportions)
-function welchPValueFromProportions(x1, n1, x2, n2) {
-  if (n1 < 2 || n2 < 2) return 1.0;
-
-  const p1 = x1 / n1;
-  const p2 = x2 / n2;
-
-  // Bernoulli variance estimate
-  const s1 = p1 * (1 - p1);
-  const s2 = p2 * (1 - p2);
-
-  const se = Math.sqrt(s1 / n1 + s2 / n2);
-  if (!isFinite(se) || se === 0) return 1.0;
-
-  const t = (p1 - p2) / se;
-
-  // Welch–Satterthwaite df
-  const a = s1 / n1;
-  const b = s2 / n2;
-  const df = (a + b) ** 2 / ((a * a) / (n1 - 1) + (b * b) / (n2 - 1));
-  if (!isFinite(df) || df <= 0) return 1.0;
-
-  // two-sided p-value using Student-t CDF
-  const cdf = jstat.studentt.cdf(Math.abs(t), df);
-  const p = 2 * (1 - cdf);
-
-  return Math.min(Math.max(p, EPS), 1);
+// --- Binomial sampler (exact for small n, normal approx for large n)
+function binomSample(n, p) {
+  if (p <= 0) return 0;
+  if (p >= 1) return n;
+  if (n < 50) {
+    let k = 0;
+    for (let i = 0; i < n; i++) if (Math.random() < p) k++;
+    return k;
+  }
+  const mean = n * p;
+  const sd = Math.sqrt(n * p * (1 - p));
+  const r = Math.round(jstat.normal.sample(mean, sd));
+  return Math.max(0, Math.min(n, r));
 }
 
-const ExperimentChart = forwardRef((props, ref) => {
+// --- Welch’s t-test p-value for two proportions
+function signedPvalWelchProportions(t) {
+  const { xC, nC, xT, nT } = t;
+  if (nC < 2 || nT < 2) return 1.0;
+
+  const p1 = xC / nC;
+  const p2 = xT / nT;
+  const s1 = p1 * (1 - p1);
+  const s2 = p2 * (1 - p2);
+  const se = Math.sqrt(s1 / nC + s2 / nT);
+  if (!isFinite(se) || se === 0) return 1.0;
+
+  const tstat = (p2 - p1) / se;
+
+  // Welch–Satterthwaite df
+  const a = s1 / nC;
+  const b = s2 / nT;
+  const df = (a + b) ** 2 / ((a * a) / (nC - 1) + (b * b) / (nT - 1));
+  if (!isFinite(df) || df <= 0) return 1.0;
+
+  const p = 1 - jstat.studentt.cdf(Math.abs(tstat), df);
+  const sign = p2 > p1 ? 1 : -1;
+  return sign * p;
+}
+
+const ExperimentChart = ({ chartRef }) => {
   const [labels, setLabels] = useState([]);
   const [neglogp, setNeglogp] = useState([]);
   const [running, setRunning] = useState(false);
 
-  // cumulative tallies
   const talliesRef = useRef({ xC: 0, nC: 0, xT: 0, nT: 0, hour: 0 });
   const intervalRef = useRef(null);
 
-  // expose a start function to parent
-  useImperativeHandle(ref, () => ({
-    startSimulation() {
-      talliesRef.current = { xC: 0, nC: 0, xT: 0, nT: 0, hour: 0 };
-      setLabels([]);
-      setNeglogp([]);
-      setRunning(true);
-    },
-  }));
+  // attach startSimulation method to the passed-in ref
+  useEffect(() => {
+    if (chartRef) {
+      chartRef.current = {
+        startSimulation: () => {
+          console.log("Simulation Started");
+          talliesRef.current = { xC: 0, nC: 0, xT: 0, nT: 0, hour: 0 };
+          setLabels([]);
+          setNeglogp([]);
+          setRunning(true);
+        },
+      };
+    }
+  }, [chartRef]);
 
   useEffect(() => {
     if (!running) return;
@@ -90,6 +96,7 @@ const ExperimentChart = forwardRef((props, ref) => {
 
     intervalRef.current = setInterval(() => {
       const t = talliesRef.current;
+
       if (t.hour >= HOURS) {
         clearInterval(intervalRef.current);
         intervalRef.current = null;
@@ -97,13 +104,11 @@ const ExperimentChart = forwardRef((props, ref) => {
         return;
       }
 
-      // split users 50/50 each hour
       const nC = Math.floor(USERS_PER_HOUR / 2);
       const nT = USERS_PER_HOUR - nC;
 
-      // jstat binomial samples
-      const xC = jstat.binomial.sample(nC, CONTROL_P);
-      const xT = jstat.binomial.sample(nT, TREAT_P);
+      const xC = binomSample(nC, CONTROL_P);
+      const xT = binomSample(nT, TREAT_P);
 
       t.xC += xC;
       t.nC += nC;
@@ -111,8 +116,8 @@ const ExperimentChart = forwardRef((props, ref) => {
       t.nT += nT;
       t.hour += 1;
 
-      const pval = welchPValueFromProportions(t.xC, t.nC, t.xT, t.nT);
-      const y = -Math.log10(Math.max(pval, EPS));
+      const pval = signedPvalWelchProportions(t);
+      const y = -Math.log10(pval);
 
       setLabels((prev) => [...prev, `h${t.hour}`]);
       setNeglogp((prev) => [...prev, y]);
@@ -143,9 +148,7 @@ const ExperimentChart = forwardRef((props, ref) => {
     plugins: {
       legend: { display: true, position: "top" },
       tooltip: {
-        callbacks: {
-          label: (ctx) => `-log10(p): ${ctx.parsed.y.toFixed(3)}`,
-        },
+        callbacks: { label: (ctx) => `-log10(p): ${ctx.parsed.y.toFixed(3)}` },
       },
     },
     scales: {
@@ -157,7 +160,6 @@ const ExperimentChart = forwardRef((props, ref) => {
         title: { display: true, text: "-log10(p)" },
         suggestedMin: 0,
         suggestedMax: 4,
-        grid: { drawBorder: false },
       },
     },
   };
@@ -173,6 +175,6 @@ const ExperimentChart = forwardRef((props, ref) => {
       </div>
     </div>
   );
-});
+};
 
 export default ExperimentChart;

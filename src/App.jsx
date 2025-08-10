@@ -7,18 +7,15 @@ const App = () => {
   const chartRef = useRef(null);
 
   const handleGo = () => {
-    // tell the chart to (re)start the simulation
+    console.log("Handling go");
     chartRef.current?.startSimulation();
   };
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-stone-900">
-      {/* Sidebar on the left */}
       <Sidebar onGo={handleGo} />
-
-      {/* Main content with chart */}
       <div className="my-40 flex-1 p-4">
-        <ExperimentChart ref={chartRef} />
+        <ExperimentChart chartRef={chartRef} />
       </div>
     </div>
   );
