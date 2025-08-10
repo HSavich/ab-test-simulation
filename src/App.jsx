@@ -4,11 +4,17 @@ import Sidebar from "./components/Sidebar";
 import ExperimentChart from "./components/ExperimentChart";
 
 const App = () => {
-  const expOptions = useRef({ dau: 1200, dauStd: 100 });
+  const expOptions = useRef({
+    dau: 1000,
+    dauStd: 100,
+    baseCtr: 0.5,
+    lift: 0.05,
+    treatProp: 0.5,
+    expLen: 7 * 24,
+  });
   const chartRef = useRef(null);
 
   const handleGo = () => {
-    console.log("Handling go");
     chartRef.current?.startSimulation();
   };
 

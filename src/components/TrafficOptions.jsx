@@ -4,15 +4,15 @@ const TrafficOptions = ({ expOptions }) => {
   const [open, setOpen] = useState(true);
 
   const handleDauChange = (e) => {
-    const value = Math.max(0, parseInt(e.target.value, 10) || 0);
+    const value = Math.max(0, parseFloat(e.target.value, 10) || 0);
     if (expOptions?.current) {
-      expOptions.current.dau = value; // write to the ref-backed object
+      expOptions.current.dau = value;
     }
   };
   const handleDauStdChange = (e) => {
-    const value = Math.max(0, parseInt(e.target.value, 10) || 0);
+    const value = Math.max(0, parseFloat(e.target.value, 10) || 0);
     if (expOptions?.current) {
-      expOptions.current.dauStd = value; // write to the ref-backed object
+      expOptions.current.dauStd = value;
     }
   };
 
@@ -28,20 +28,22 @@ const TrafficOptions = ({ expOptions }) => {
         <div className="space-y-2 bg-[#c1bbbb] p-4 text-sm">
           <label className="block font-semibold">
             Daily Traffic:
+            <br />
             <input
               type="number"
               min={0}
-              className="ml-2 w-28 rounded border border-gray-400 px-1 text-black"
+              className="mb-1 ml-2 w-28 rounded border border-gray-400 px-1 text-black"
               defaultValue={expOptions.current?.dau ?? 0}
               onChange={handleDauChange}
             />
           </label>
           <label className="block font-semibold">
             Daily Traffic Standard Deviation:
+            <br />
             <input
               type="number"
               min={0}
-              className="ml-2 w-28 rounded border border-gray-400 px-1 text-black"
+              className="mb-1 ml-2 w-28 rounded border border-gray-400 px-1 text-black"
               defaultValue={expOptions.current?.dauStd ?? 0}
               onChange={handleDauStdChange}
             />

@@ -20,11 +20,6 @@ ChartJS.register(
   Legend,
 );
 
-const HOURS = 24 * 7;
-const TREATMENT_PROP = 0.5;
-const CONTROL_P = 0.5;
-const TREAT_P = 0.525;
-
 // --- Binomial sampler (exact for small n, normal approx for large n)
 function binomSample(n, p) {
   if (p <= 0) return 0;
@@ -100,7 +95,7 @@ const ExperimentChart = ({ chartRef, expOptions }) => {
     const step = () => {
       const t = talliesRef.current;
 
-      if (t.hour >= HOURS) {
+      if (t.hour >= expOptions.current.expLen) {
         setRunning(false);
         return;
       }
@@ -115,11 +110,14 @@ const ExperimentChart = ({ chartRef, expOptions }) => {
       //increase the expected daily value of users
       //this does shift the variance of daily users below the user input for low DAU
       //toDo use negative binomial to fix
-      nU = Math.min(Math.max(nU, 0), expOptions.current.dau / 12);
-      const nT = binomSample(nU, TREATMENT_PROP);
+      nU = Math.min(Math.max(nU, 0), Math.floor(expOptions.current.dau / 12));
+      const nT = binomSample(nU, expOptions.current.treatProp);
       const nC = nU - nT;
-      const xC = binomSample(nC, CONTROL_P);
-      const xT = binomSample(nT, TREAT_P);
+      const xC = binomSample(nC, expOptions.current.baseCtr);
+      const xT = binomSample(
+        nT,
+        expOptions.current.baseCtr * (1 + expOptions.current.lift),
+      );
 
       t.xC += xC;
       t.nC += nC;
@@ -133,8 +131,9 @@ const ExperimentChart = ({ chartRef, expOptions }) => {
       setLabels((prev) => [...prev, `${t.hour}`]);
       setNeglogp((prev) => [...prev, y]);
 
-      // schedule next tick: 4/s (250ms) through hour 48, then 10/s (100ms)
-      const nextDelay = t.hour < 48 ? 250 : 100;
+      // schedule next tick: 4/s (250ms) through hour 24, then 8/s through hour 48,
+      // then 10/s (100ms)
+      const nextDelay = t.hour > 48 ? 100 : t.hour > 24 ? 175 : 250;
       intervalRef.current = setTimeout(step, nextDelay);
     };
 
@@ -229,22 +228,36 @@ const ExperimentChart = ({ chartRef, expOptions }) => {
     },
   };
 
+  const nT = talliesRef.current.nT;
+  const nC = talliesRef.current.nC;
+  const xT = talliesRef.current.xT;
+  const xC = talliesRef.current.xC;
+  const nU = nT + nC;
+  const pc_hat = xC / nC;
+  const pt_hat = xT / nT;
+  const lift_hat = pt_hat / pc_hat - 1;
+  const [_, p] = signedPvalWelchProportions({ xC, nC, xT, nT });
+
   return (
     <div className="h-full w-full rounded-xl bg-white p-4">
       <div className="h-[calc(100%-2rem)]">
         <Line data={data} options={options} />
       </div>
-      <a className="mr-8">
-        Users = {talliesRef.current.nT + talliesRef.current.nC}
-      </a>
-      <a className="mr-8">
-        Control Clickthrough ={" "}
-        {((talliesRef.current.xC / talliesRef.current.nC) * 100).toFixed(2)}%
-      </a>
-      <a className="mr-8">
-        Treatment Clickthrough ={" "}
-        {((talliesRef.current.xT / talliesRef.current.nT) * 100).toFixed(2)}%
-      </a>
+      <a className="mr-8">Users = {nU}</a>
+      {nU > 0 && (
+        <>
+          <a className="mr-8">
+            Control Clickthrough = {(pc_hat * 100).toFixed(2)}%
+          </a>
+          <a className="mr-8">
+            Treatment Clickthrough = {(pt_hat * 100).toFixed(2)}%
+          </a>
+          <a className="mr-8">Lift Estimate = {(lift_hat * 100).toFixed(2)}%</a>
+          <a className="mr-8">
+            P-value = {p < 0.001 ? p.toExponential(1) : p.toFixed(3)}
+          </a>
+        </>
+      )}
     </div>
   );
 };
