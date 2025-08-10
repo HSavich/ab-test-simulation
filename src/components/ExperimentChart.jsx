@@ -21,7 +21,7 @@ ChartJS.register(
 );
 
 const HOURS = 24 * 7;
-const USERS_PER_HOUR = 100;
+const TREATMENT_PROP = 0.5;
 const CONTROL_P = 0.5;
 const TREAT_P = 0.525;
 
@@ -43,14 +43,14 @@ function binomSample(n, p) {
 // --- Welch’s t-test p-value for two proportions
 function signedPvalWelchProportions(t) {
   const { xC, nC, xT, nT } = t;
-  if (nC < 2 || nT < 2) return 1.0;
+  if (nC < 2 || nT < 2) return [1, 1];
 
   const p1 = xC / nC;
   const p2 = xT / nT;
   const s1 = p1 * (1 - p1);
   const s2 = p2 * (1 - p2);
   const se = Math.sqrt(s1 / nC + s2 / nT);
-  if (!isFinite(se) || se === 0) return 1.0;
+  if (!isFinite(se) || se === 0) return [1, 1];
 
   const tstat = (p2 - p1) / se;
 
@@ -58,14 +58,14 @@ function signedPvalWelchProportions(t) {
   const a = s1 / nC;
   const b = s2 / nT;
   const df = (a + b) ** 2 / ((a * a) / (nC - 1) + (b * b) / (nT - 1));
-  if (!isFinite(df) || df <= 0) return 1.0;
+  if (!isFinite(df) || df <= 0) return [1, 1];
 
   const p = 1 - jstat.studentt.cdf(Math.abs(tstat), df);
   const sign = p2 > p1 ? 1 : -1;
   return [sign, p];
 }
 
-const ExperimentChart = ({ chartRef }) => {
+const ExperimentChart = ({ chartRef, expOptions }) => {
   const [labels, setLabels] = useState([]);
   const [neglogp, setNeglogp] = useState([]);
   const [running, setRunning] = useState(false);
@@ -105,9 +105,19 @@ const ExperimentChart = ({ chartRef }) => {
         return;
       }
 
-      const nC = Math.floor(USERS_PER_HOUR / 2);
-      const nT = USERS_PER_HOUR - nC;
-
+      let nU = Math.round(
+        jstat.normal.sample(
+          expOptions.current.dau / 24,
+          Math.sqrt(expOptions.current.dauStd ** 2 / 24),
+        ),
+      );
+      //hourly users cannot be below zero. We truncate above as well to not
+      //increase the expected daily value of users
+      //this does shift the variance of daily users below the user input for low DAU
+      //toDo use negative binomial to fix
+      nU = Math.min(Math.max(nU, 0), expOptions.current.dau / 12);
+      const nT = binomSample(nU, TREATMENT_PROP);
+      const nC = nU - nT;
       const xC = binomSample(nC, CONTROL_P);
       const xT = binomSample(nT, TREAT_P);
 
@@ -224,6 +234,17 @@ const ExperimentChart = ({ chartRef }) => {
       <div className="h-[calc(100%-2rem)]">
         <Line data={data} options={options} />
       </div>
+      <a className="mr-8">
+        Users = {talliesRef.current.nT + talliesRef.current.nC}
+      </a>
+      <a className="mr-8">
+        Control Clickthrough ={" "}
+        {((talliesRef.current.xC / talliesRef.current.nC) * 100).toFixed(2)}%
+      </a>
+      <a className="mr-8">
+        Treatment Clickthrough ={" "}
+        {((talliesRef.current.xT / talliesRef.current.nT) * 100).toFixed(2)}%
+      </a>
     </div>
   );
 };

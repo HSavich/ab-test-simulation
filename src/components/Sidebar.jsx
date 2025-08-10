@@ -1,19 +1,21 @@
 import React from "react";
 import TrafficOptions from "./TrafficOptions";
 import EffectOptions from "./EffectOptions";
+import ExperimentDesignOptions from "./ExperimentDesignOptions";
 import AnalysisOptions from "./AnalysisOptions";
 
-const Sidebar = ({ onGo }) => {
+const Sidebar = ({ onGo, expOptions, setExpOptions }) => {
   return (
-    <div className="relative h-screen w-70 bg-yellow-800 text-center text-4xl text-white">
-      <div className="h-full bg-[#44332a] pt-8 text-lg text-black">
-        <TrafficOptions />
+    <div className="relative flex h-screen w-70 flex-col bg-yellow-800 text-center text-4xl text-white">
+      <div className="flex-1 overflow-y-auto bg-[#44332a] pt-8 text-lg text-black">
+        <TrafficOptions expOptions={expOptions} setExpOptions={setExpOptions} />
         <EffectOptions />
         <AnalysisOptions />
+        <ExperimentDesignOptions />
       </div>
-      <div className="absolute bottom-0 h-24 w-full bg-gray-600">
+      <div className="flex h-24 w-full items-center justify-center bg-gray-600">
         <button
-          className="mt-4 h-16 w-56 cursor-pointer rounded-3xl border-4 border-gray-700 bg-[#d8eed8] text-black active:translate-y-0.5 active:bg-[#bbbbbb]"
+          className="h-16 w-56 cursor-pointer rounded-3xl border-4 border-gray-700 bg-[#d8eed8] text-black active:translate-y-0.5 active:bg-[#bbbbbb]"
           onClick={onGo}
         >
           Go
