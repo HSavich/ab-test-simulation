@@ -21,10 +21,9 @@ ChartJS.register(
 );
 
 const HOURS = 24 * 7;
-const USERS_PER_HOUR = 500;
+const USERS_PER_HOUR = 100;
 const CONTROL_P = 0.5;
 const TREAT_P = 0.525;
-const TICK_MS = 250;
 
 // --- Binomial sampler (exact for small n, normal approx for large n)
 function binomSample(n, p) {
@@ -63,7 +62,7 @@ function signedPvalWelchProportions(t) {
 
   const p = 1 - jstat.studentt.cdf(Math.abs(tstat), df);
   const sign = p2 > p1 ? 1 : -1;
-  return sign * p;
+  return [sign, p];
 }
 
 const ExperimentChart = ({ chartRef }) => {
@@ -92,14 +91,16 @@ const ExperimentChart = ({ chartRef }) => {
   useEffect(() => {
     if (!running) return;
 
-    if (intervalRef.current) clearInterval(intervalRef.current);
+    // clear any previous timer
+    if (intervalRef.current) {
+      clearTimeout(intervalRef.current);
+      intervalRef.current = null;
+    }
 
-    intervalRef.current = setInterval(() => {
+    const step = () => {
       const t = talliesRef.current;
 
       if (t.hour >= HOURS) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
         setRunning(false);
         return;
       }
@@ -116,15 +117,26 @@ const ExperimentChart = ({ chartRef }) => {
       t.nT += nT;
       t.hour += 1;
 
-      const pval = signedPvalWelchProportions(t);
-      const y = -Math.log10(pval);
+      const [sign, pval] = signedPvalWelchProportions(t);
+      const y = sign * -Math.log10(pval);
 
-      setLabels((prev) => [...prev, `h${t.hour}`]);
+      setLabels((prev) => [...prev, `${t.hour}`]);
       setNeglogp((prev) => [...prev, y]);
-    }, TICK_MS);
+
+      // schedule next tick: 4/s (250ms) through hour 48, then 10/s (100ms)
+      const nextDelay = t.hour < 48 ? 250 : 100;
+      intervalRef.current = setTimeout(step, nextDelay);
+    };
+
+    // kick off first tick
+    const initialDelay = talliesRef.current.hour < 48 ? 250 : 100;
+    intervalRef.current = setTimeout(step, initialDelay);
 
     return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
+      if (intervalRef.current) {
+        clearTimeout(intervalRef.current);
+        intervalRef.current = null;
+      }
     };
   }, [running]);
 
@@ -134,12 +146,16 @@ const ExperimentChart = ({ chartRef }) => {
       {
         label: "-log10(p-value)",
         data: neglogp,
-        borderWidth: 2,
+        borderColor: "#ff7f0e", // orange line
+        backgroundColor: "#ff7f0e",
+        borderWidth: 2, // bolder line
         pointRadius: 0,
         tension: 0.25,
       },
     ],
   };
+
+  const useDays = talliesRef.current.hour >= 48;
 
   const options = {
     animation: false,
@@ -153,23 +169,58 @@ const ExperimentChart = ({ chartRef }) => {
     },
     scales: {
       x: {
-        title: { display: true, text: "Hours" },
-        ticks: { autoSkip: true, maxTicksLimit: 12 },
+        title: {
+          display: true,
+          text: useDays ? "Day" : "Hour",
+          font: { size: 16, weight: "bold" },
+        },
+        ticks: {
+          autoSkip: useDays ? false : true,
+          maxTicksLimit: 12,
+          callback: function (value, index) {
+            if (!useDays) {
+              return this.getLabelForValue(value); // 1 decimal place
+            } else {
+              const day = this.getLabelForValue(value) / 24;
+              if (day % 1 == 0) {
+                return day;
+              } else {
+                return null;
+              }
+            }
+          },
+          color: "#333",
+          font: { size: 14, weight: "bold" },
+        },
+        grid: { color: "#ccc" },
       },
       y: {
-        title: { display: true, text: "-log10(p)" },
-        suggestedMin: 0,
+        title: {
+          display: true,
+          text: "P-value",
+          font: { size: 16, weight: "bold" },
+        },
+        suggestedMin: -4,
         suggestedMax: 4,
+        ticks: {
+          callback: function (value) {
+            const p = Math.pow(10, -Math.abs(value));
+            // Format in scientific notation if very small
+            return p < 0.001 ? p.toExponential(1) : p.toFixed(3);
+          },
+          color: "#333",
+          font: { size: 14 },
+        },
+        grid: {
+          color: (context) => (context.tick.value === 0 ? "#000" : "#ccc"),
+          lineWidth: (context) => (context.tick.value === 0 ? 2 : 1),
+        },
       },
     },
   };
 
   return (
     <div className="h-full w-full rounded-xl bg-white p-4">
-      <div className="mb-2 text-sm text-stone-600">
-        Streaming A/B test over 1 week — 50 users/hour, treatment has +5%
-        relative lift (0.50 → 0.525).
-      </div>
       <div className="h-[calc(100%-2rem)]">
         <Line data={data} options={options} />
       </div>

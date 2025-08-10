@@ -12,7 +12,7 @@ const App = () => {
   };
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-stone-900">
+    <div className="flex h-screen w-screen overflow-hidden bg-[#dddddd]">
       <Sidebar onGo={handleGo} />
       <div className="my-40 flex-1 p-4">
         <ExperimentChart chartRef={chartRef} />
