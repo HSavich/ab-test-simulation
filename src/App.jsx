@@ -1,7 +1,7 @@
 import "./App.css";
 import React, { useRef } from "react";
 import Sidebar from "./components/Sidebar";
-import ExperimentChart from "./components/ExperimentChart";
+import Simulation from "./components/Simulation";
 
 const App = () => {
   const expOptions = useRef({
@@ -12,17 +12,17 @@ const App = () => {
     treatProp: 0.5,
     expLen: 7 * 24,
   });
-  const chartRef = useRef(null);
+  const simRef = useRef(null);
 
   const handleGo = () => {
-    chartRef.current?.startSimulation();
+    simRef.current?.startSimulation();
   };
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-[#dddddd]">
       <Sidebar onGo={handleGo} expOptions={expOptions} />
       <div className="my-40 flex-1 p-4">
-        <ExperimentChart chartRef={chartRef} expOptions={expOptions} />
+        <Simulation simRef={simRef} expOptions={expOptions} />
       </div>
     </div>
   );
