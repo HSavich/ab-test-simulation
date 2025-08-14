@@ -90,9 +90,8 @@ const Simulation = ({ expOptions }) => {
           Math.sqrt(expOptions.current.dauStd ** 2 / 24),
         ),
       );
-      //hourly users cannot be below zero. We truncate above as well to not
-      //increase the expected daily value of users
-      //this does shift the variance of daily users below the user input for low DAU
+      //hourly users cannot be below zero. We truncate above to
+      //keep expected value constant for low nU
       //toDo use negative binomial to fix
       nU = Math.min(Math.max(nU, 0), Math.floor(expOptions.current.dau / 12));
       const nT = binomSample(nU, expOptions.current.treatProp);
@@ -167,8 +166,6 @@ const Simulation = ({ expOptions }) => {
       )}
     </div>
   );
-
-  return <div>Simulation</div>;
 };
 
 export default Simulation;
