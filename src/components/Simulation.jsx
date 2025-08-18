@@ -42,9 +42,7 @@ function signedPvalWelchProportions(t) {
   return [sign, p];
 }
 
-const Simulation = ({ expOptions }) => {
-  const simRef = useRef(null);
-
+const Simulation = ({ simRef, expOptions }) => {
   const [labels, setLabels] = useState([]);
   const [neglogp, setNeglogp] = useState([]);
   const [running, setRunning] = useState(false);
@@ -57,7 +55,6 @@ const Simulation = ({ expOptions }) => {
     if (simRef) {
       simRef.current = {
         startSimulation: () => {
-          console.log("Simulation Started");
           talliesRef.current = { xC: 0, nC: 0, xT: 0, nT: 0, hour: 0 };
           setLabels([]);
           setNeglogp([]);
@@ -69,7 +66,6 @@ const Simulation = ({ expOptions }) => {
 
   useEffect(() => {
     if (!running) return;
-
     // clear any previous timer
     if (intervalRef.current) {
       clearTimeout(intervalRef.current);
