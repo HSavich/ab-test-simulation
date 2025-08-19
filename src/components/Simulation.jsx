@@ -90,12 +90,23 @@ const Simulation = ({ simRef, expOptions }) => {
       //keep expected value constant for low nU
       //toDo use negative binomial to fix
       nU = Math.min(Math.max(nU, 0), Math.floor(expOptions.current.dau / 12));
+
+      //calculate novelty/primacy effect
+      let novelty =
+        1 +
+        (expOptions.current.novelty *
+          (expOptions.current.noveltyLen - t.hour)) /
+          expOptions.current.noveltyLen;
+      if (t.hour > expOptions.current.noveltyLen) {
+        novelty = 1;
+      }
+
       const nT = binomSample(nU, expOptions.current.treatProp);
       const nC = nU - nT;
       const xC = binomSample(nC, expOptions.current.baseCtr);
       const xT = binomSample(
         nT,
-        expOptions.current.baseCtr * (1 + expOptions.current.lift),
+        expOptions.current.baseCtr * (1 + expOptions.current.lift) * novelty,
       );
 
       t.xC += xC;

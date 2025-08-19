@@ -11,6 +11,8 @@ const App = () => {
     lift: 0.05,
     treatProp: 0.5,
     expLen: 7 * 24,
+    novelty: 0,
+    noveltyLen: 2 * 24,
   });
   const simRef = useRef(null);
 

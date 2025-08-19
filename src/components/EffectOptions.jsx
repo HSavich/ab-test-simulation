@@ -15,11 +15,23 @@ const EffectOptions = ({ expOptions }) => {
       expOptions.current.lift = value / 100;
     }
   };
+  const handleNoveltyChange = (e) => {
+    const value = parseFloat(e.target.value, 10) || 0;
+    if (expOptions?.current) {
+      expOptions.current.novelty = value / 100;
+    }
+  };
+  const handleNoveltyLenChange = (e) => {
+    const value = parseFloat(e.target.value, 10) || 0;
+    if (expOptions?.current) {
+      expOptions.current.novelty = value;
+    }
+  };
 
   return (
     <>
       <div
-        className="h-10 cursor-pointer border-2 border-slate-500 bg-[#998877]"
+        className="flex h-10 cursor-pointer items-center justify-center border-2 border-slate-500 bg-[#998877] text-center"
         onClick={() => setOpen(!open)}
       >
         Effect
@@ -49,6 +61,30 @@ const EffectOptions = ({ expOptions }) => {
               onChange={handleLiftChange}
             />{" "}
             %
+          </label>
+          <label className="block font-semibold">
+            Novelty/Primacy Effect:
+            <br />
+            <input
+              type="number"
+              min={-100}
+              className="mb-1 ml-2 w-28 rounded border border-gray-400 px-1 text-black"
+              defaultValue={expOptions.current?.novelty * 100 ?? 0}
+              onChange={handleNoveltyChange}
+            />{" "}
+            %
+          </label>
+          <label className="block font-semibold">
+            Novelty/Primacy Effect Duration:
+            <br />
+            <input
+              type="number"
+              min={-100}
+              className="mb-1 ml-2 w-28 rounded border border-gray-400 px-1 text-black"
+              defaultValue={expOptions.current?.noveltyLen ?? 0}
+              onChange={handleNoveltyLenChange}
+            />{" "}
+            hours
           </label>
         </div>
       )}

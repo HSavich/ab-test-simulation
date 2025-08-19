@@ -25,7 +25,7 @@ const ExperimentDesignOptions = ({ expOptions }) => {
   return (
     <>
       <div
-        className="h-10 cursor-pointer border-2 border-slate-500 bg-[#998877]"
+        className="flex h-10 cursor-pointer items-center justify-center border-2 border-slate-500 bg-[#998877] text-center"
         onClick={() => setOpen(!open)}
       >
         ExperimentDesign
