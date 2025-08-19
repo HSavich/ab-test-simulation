@@ -46,8 +46,6 @@ function signedPvalWelchProportions(t) {
 }
 
 const ExperimentChart = ({ talliesRef, labels, neglogp }) => {
-  console.log("Running");
-
   const data = {
     labels,
     datasets: [

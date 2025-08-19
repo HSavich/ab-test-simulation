@@ -108,7 +108,6 @@ const Simulation = ({ simRef, expOptions }) => {
         nT,
         expOptions.current.baseCtr * (1 + expOptions.current.lift) * novelty,
       );
-
       t.xC += xC;
       t.nC += nC;
       t.xT += xT;

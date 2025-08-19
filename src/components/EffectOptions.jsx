@@ -24,7 +24,7 @@ const EffectOptions = ({ expOptions }) => {
   const handleNoveltyLenChange = (e) => {
     const value = parseFloat(e.target.value, 10) || 0;
     if (expOptions?.current) {
-      expOptions.current.novelty = value;
+      expOptions.current.noveltyLen = value;
     }
   };
 
