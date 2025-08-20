@@ -42,7 +42,7 @@ function signedPvalWelchProportions(t) {
   return [sign, p];
 }
 
-const Simulation = ({ simRef, expOptions }) => {
+const Simulation = ({ simRef, expOptions, anaOptions }) => {
   const [labels, setLabels] = useState([]);
   const [neglogp, setNeglogp] = useState([]);
   const [running, setRunning] = useState(false);

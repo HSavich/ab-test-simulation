@@ -14,6 +14,9 @@ const App = () => {
     novelty: 0,
     noveltyLen: 2 * 24,
   });
+  const anaOptions = useRef({
+    burnIn: 0 * 24,
+  });
   const simRef = useRef(null);
 
   const handleGo = () => {
@@ -22,9 +25,17 @@ const App = () => {
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-[#dddddd]">
-      <Sidebar onGo={handleGo} expOptions={expOptions} />
+      <Sidebar
+        onGo={handleGo}
+        expOptions={expOptions}
+        anaOptions={anaOptions}
+      />
       <div className="my-40 flex-1 p-4">
-        <Simulation simRef={simRef} expOptions={expOptions} />
+        <Simulation
+          simRef={simRef}
+          expOptions={expOptions}
+          anaOptions={anaOptions}
+        />
       </div>
     </div>
   );
